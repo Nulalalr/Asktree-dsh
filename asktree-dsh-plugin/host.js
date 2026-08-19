@@ -1,13 +1,13 @@
 /**
  * asktree-dsh-plugin — Host 半（code.host）
  *
- * 来源：动态插件 askt-1 / pkg-5（AskTree 可视化 v1）
+ * 来源：动态插件 askt-1 / pkg-6（Asktree v2：按会话隔离 + 重命名）
  * 用法：把整个函数体原样作为 cordis_define 的 code.host 传入。
  *
  * 职责：
  *  - 5 个模型工具：asktree_import_share / asktree_parse_chat / asktree_show /
  *    asktree_build_context / asktree_answer
- *  - 内存树仓 + GUI 画布 RPC：harness.handle("asktree.getTree" / "asktree.mutate")
+ *  - 内存树仓（按会话隔离）+ GUI 画布 RPC：harness.handle("asktree.getTree" / "asktree.mutate")
  *
  * 说明：本文件是「函数体」，不是可独立运行的 Node 模块；
  * 动态插件由 DSH 会话的 cordis_define 加载（详见 README.md）。
@@ -22,10 +22,19 @@ return {
       "同一层会出现多个并列的追问，请针对当前问题作答，不要重复其他分支的内容；" +
       "回答要具体、可操作，避免空泛。若上下文不足，可指出需要补充的信息。";
 
-    /* ---- 树仓（供 GUI 画布读取/修改；插件生命周期内存） ---- */
-    const store = { tree: null, title: null, via: null, notice: null };
-    function setStore(tree, title, via, notice) { store.tree = tree; store.title = title || null; store.via = via || null; store.notice = notice || null; }
-    function snapshot() { return { tree: store.tree, title: store.title, via: store.via, notice: store.notice }; }
+    /* ---- 树仓（按会话隔离；插件生命周期内存） ---- */
+    const stores = new Map();
+    function storeFor(sessionId) {
+      const key = sessionId ? String(sessionId) : "default";
+      if (!stores.has(key)) stores.set(key, { tree: null, title: null, via: null, notice: null });
+      return stores.get(key);
+    }
+    function snapshot(st) { return { tree: st.tree, title: st.title, via: st.via, notice: st.notice }; }
+    function sessionIdOf(exec) {
+      try {
+        return exec && exec.agent && exec.agent.session && exec.agent.session.id ? String(exec.agent.session.id) : null;
+      } catch (e) { return null; }
+    }
     function nextNodeId(tree) {
       let m = 0;
       Object.keys(tree.nodes || {}).forEach(k => {
@@ -41,14 +50,14 @@ return {
       if (n.parentId) { const p = tree.nodes[n.parentId]; if (p) p.children = (p.children || []).filter(c => c !== id); }
       else if (tree.rootId === id) tree.rootId = null;
     }
-    function requireNode(id) {
-      const n = store.tree && store.tree.nodes && store.tree.nodes[id];
+    function requireNode(st, id) {
+      const n = st.tree && st.tree.nodes && st.tree.nodes[id];
       if (!n) throw new Error("节点 " + id + " 不存在于当前树");
       return n;
     }
-    async function answerNode(nodeId) {
-      const n = requireNode(nodeId);
-      const context = buildContext(store.tree, nodeId);
+    async function answerNode(st, nodeId) {
+      const n = requireNode(st, nodeId);
+      const context = buildContext(st.tree, nodeId);
       const route = await resolveRoute(ctx, null, null);
       const r = await streamAnswer(route, context.messages, context.system, 0.6, 900, undefined);
       n.answer = r.text;
@@ -325,7 +334,7 @@ return {
     const tools = [
       harness.defineTool({
         name: "asktree_import_share",
-        description: "从 DeepSeek 分享链接（或 share_id）抓取对话并重建为「问答树」JSON，能还原网页对话中同一处发散出的并列追问（父问题 → 多个并列子问题）。返回 { ok, title, via, rootId, count, nodeCount, nodes }：nodes 为 { id: { id, text, answer, parentId, children[] } } 的扁平结构（与 AskTree 节点 schema 一致），可直接喂给 asktree_build_context / asktree_answer，并会自动同步到 GUI 画布。直连失败时经 api.allorigins.win 第三方代理兜底（内容会经该代理中转）。注意：本工具依赖宿主挂载 web fetch provider 或允许 shell 出网；若当前环境两者均不可用（沙箱拦截 HTTPS），请改用手动粘贴正文走 asktree_parse_chat。",
+        description: "从 DeepSeek 分享链接（或 share_id）抓取对话并重建为「问答树」JSON，能还原网页对话中同一处发散出的并列追问（父问题 → 多个并列子问题）。返回 { ok, title, via, rootId, count, nodeCount, nodes }：nodes 为 { id: { id, text, answer, parentId, children[] } } 的扁平结构（与 AskTree 节点 schema 一致），可直接喂给 asktree_build_context / asktree_answer，并会自动同步到当前会话的 GUI 画布。直连失败时经 api.allorigins.win 第三方代理兜底（内容会经该代理中转）。注意：本工具依赖宿主挂载 web fetch provider 或允许 shell 出网；若当前环境两者均不可用（沙箱拦截 HTTPS），请改用手动粘贴正文走 asktree_parse_chat。",
         parameters: {
           type: "object",
           properties: {
@@ -344,7 +353,8 @@ return {
           if (!msgs.length) throw new Error("对话内容为空（分享链接可能已失效）");
           const built = buildTreeFromMessages(msgs);
           const title = data.title && data.title !== "Shared Conversation" ? String(data.title) : null;
-          setStore(built.tree, title, via, via === "proxy" ? "内容经 api.allorigins.win 第三方代理中转" : null);
+          const st = storeFor(sessionIdOf(exec));
+          st.tree = built.tree; st.title = title || null; st.via = via; st.notice = via === "proxy" ? "内容经 api.allorigins.win 第三方代理中转" : null;
           const out = {
             ok: true,
             title,
@@ -353,7 +363,7 @@ return {
             count: msgs.length,
             nodeCount: Object.keys(built.nodes).length,
             nodes: built.nodes,
-            notice: "已同步到 GUI 画布（点会话栏「树」按钮查看）"
+            notice: "已同步到当前会话的 GUI 画布（点会话栏 Asktree 按钮查看）"
           };
           if (built.warnings.length) out.warnings = built.warnings;
           return out;
@@ -362,7 +372,7 @@ return {
 
       harness.defineTool({
         name: "asktree_parse_chat",
-        description: "把复制的网页对话正文解析为问答轮次并串成线性树。DeepSeek 分享页全选复制的正文识别最准（每条回答自带「本回答由 AI 生成，内容仅供参考」结尾标记）。返回 { ok, mode: marker|generic, turns:[{q,a}], tree:{nodes,rootId}, count }，并会自动同步到 GUI 画布。局限：纯文本没有 parent_id，只能重建线性链，并列分支会丢失；要保留分支请用 asktree_import_share。",
+        description: "把复制的网页对话正文解析为问答轮次并串成线性树。DeepSeek 分享页全选复制的正文识别最准（每条回答自带「本回答由 AI 生成，内容仅供参考」结尾标记）。返回 { ok, mode: marker|generic, turns:[{q,a}], tree:{nodes,rootId}, count }，并会自动同步到当前会话的 GUI 画布。局限：纯文本没有 parent_id，只能重建线性链，并列分支会丢失；要保留分支请用 asktree_import_share。",
         parameters: {
           type: "object",
           properties: {
@@ -378,14 +388,15 @@ return {
           const turns = parseChatTurns(text);
           if (!turns || !turns.length) throw new Error("未能识别出对话结构：请确认粘贴的是「问题 + 回答」交替的内容（DeepSeek 分享页复制的内容识别最准）");
           const tree = linearTreeFromTurns(turns);
-          setStore(tree, null, "paste", null);
-          return { ok: true, mode: AI_END_RE.test(text) ? "marker" : "generic", turns, tree, count: turns.length, notice: "已同步到 GUI 画布（点会话栏「树」按钮查看）" };
+          const st = storeFor(sessionIdOf(exec));
+          st.tree = tree; st.title = null; st.via = "paste"; st.notice = null;
+          return { ok: true, mode: AI_END_RE.test(text) ? "marker" : "generic", turns, tree, count: turns.length, notice: "已同步到当前会话的 GUI 画布（点会话栏 Asktree 按钮查看）" };
         }
       }),
 
       harness.defineTool({
         name: "asktree_show",
-        description: "把一棵问答树同步到 GUI 画布显示（不校验来源，适合直接把任意符合 { nodes, rootId } 形状的树推给画布）。传 tree 则替换当前画布内容；不传则仅返回当前画布状态。返回 { ok, tree, title, via, notice }。",
+        description: "把一棵问答树同步到当前会话的 GUI 画布显示（不校验来源，适合直接把任意符合 { nodes, rootId } 形状的树推给画布）。传 tree 则替换当前画布内容；不传则仅返回当前画布状态。返回 { ok, tree, title, via, notice }。",
         parameters: {
           type: "object",
           properties: {
@@ -396,10 +407,11 @@ return {
         },
         output: jsonOutput(),
         async execute(args, exec) {
+          const st = storeFor(sessionIdOf(exec));
           if (args && args.tree && args.tree.nodes && args.tree.rootId) {
-            setStore(args.tree, args.title || store.title, args.via || "json", null);
+            st.tree = args.tree; st.title = args.title || st.title; st.via = args.via || "json"; st.notice = null;
           }
-          return { ok: true, tree: store.tree, title: store.title, via: store.via, notice: "已同步到 GUI 画布（点会话栏「树」按钮查看）" };
+          return { ok: true, tree: st.tree, title: st.title, via: st.via, notice: "已同步到当前会话的 GUI 画布（点会话栏 Asktree 按钮查看）" };
         }
       }),
 
@@ -482,56 +494,57 @@ return {
     tools.forEach(t => ctx.effect(() => harness.registerTool(ctx, t)));
     console.log("[asktree] 已注册工具: " + tools.map(t => t.name).join(", "));
 
-    /* ============ GUI 画布 RPC ============ */
-    ctx.effect(() => harness.handle("asktree.getTree", () => snapshot()));
+    /* ============ GUI 画布 RPC（按会话隔离） ============ */
+    ctx.effect(() => harness.handle("asktree.getTree", (args) => snapshot(storeFor(args && args.sessionId))));
     ctx.effect(() => harness.handle("asktree.mutate", async (args) => {
+      const st = storeFor(args && args.sessionId);
       const op = args && args.op;
       if (op === "demo") {
-        setStore(JSON.parse(JSON.stringify(DEMO_TREE)), "示例：深度学习×量化投资", "demo", null);
-        return snapshot();
+        st.tree = JSON.parse(JSON.stringify(DEMO_TREE)); st.title = "示例：深度学习×量化投资"; st.via = "demo"; st.notice = null;
+        return snapshot(st);
       }
       if (op === "load") {
         if (!args.tree || !args.tree.nodes || !args.tree.rootId) throw new Error("load 需要合法的 tree { nodes, rootId }");
-        setStore(args.tree, args.title || store.title, args.via || "json", null);
-        return snapshot();
+        st.tree = args.tree; st.title = args.title || st.title; st.via = args.via || "json"; st.notice = null;
+        return snapshot(st);
       }
-      if (!store.tree) throw new Error("尚未导入任何树：先让模型运行 asktree_import_share / asktree_parse_chat，或点「载入示例树」");
+      if (!st.tree) throw new Error("尚未导入任何树：先让模型运行 asktree_import_share / asktree_parse_chat，或点「载入示例树」");
       switch (op) {
         case "addChild": {
           const parentId = String(args.parentId);
           const text = typeof args.text === "string" ? args.text.trim() : "";
-          requireNode(parentId);
+          requireNode(st, parentId);
           if (!text) throw new Error("子问题内容为空");
-          const id = nextNodeId(store.tree);
-          store.tree.nodes[id] = { id, text, answer: "", parentId, children: [] };
-          store.tree.nodes[parentId].children.push(id);
+          const id = nextNodeId(st.tree);
+          st.tree.nodes[id] = { id, text, answer: "", parentId, children: [] };
+          st.tree.nodes[parentId].children.push(id);
           if (args.autoAnswer) {
-            try { await answerNode(id); } catch (e) { store.tree.nodes[id].answer = "生成失败：" + (e && e.message ? e.message : e); }
+            try { await answerNode(st, id); } catch (e) { st.tree.nodes[id].answer = "生成失败：" + (e && e.message ? e.message : e); }
           }
-          return snapshot();
+          return snapshot(st);
         }
         case "answer": {
           const id = String(args.nodeId);
-          requireNode(id);
-          try { await answerNode(id); } catch (e) { throw new Error("生成失败：" + (e && e.message ? e.message : e)); }
-          return snapshot();
+          requireNode(st, id);
+          try { await answerNode(st, id); } catch (e) { throw new Error("生成失败：" + (e && e.message ? e.message : e)); }
+          return snapshot(st);
         }
         case "save": {
-          const n = requireNode(String(args.nodeId));
+          const n = requireNode(st, String(args.nodeId));
           if (typeof args.text === "string") n.text = args.text;
           if (typeof args.answer === "string") n.answer = args.answer;
-          return snapshot();
+          return snapshot(st);
         }
         case "remove": {
           const id = String(args.nodeId);
-          requireNode(id);
-          removeSubtree(store.tree, id);
-          if (!store.tree.rootId) store.tree = null;
-          return snapshot();
+          requireNode(st, id);
+          removeSubtree(st.tree, id);
+          if (!st.tree.rootId) st.tree = null;
+          return snapshot(st);
         }
         case "setTitle": {
-          store.title = typeof args.title === "string" ? args.title : null;
-          return snapshot();
+          st.title = typeof args.title === "string" ? args.title : null;
+          return snapshot(st);
         }
         default:
           throw new Error("未知操作：" + op);

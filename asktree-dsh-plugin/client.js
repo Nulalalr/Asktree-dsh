@@ -1,13 +1,13 @@
 /**
  * asktree-dsh-plugin — Client 半（code.client）
  *
- * 来源：动态插件 askt-1 / pkg-5（AskTree 可视化 v1）
+ * 来源：动态插件 askt-1 / pkg-6（Asktree v2：按会话隔离 + 重命名）
  * 用法：把整个函数体原样作为 cordis_define 的 code.client 传入。
  *
  * 职责：
  *  - shell.overlay 浮层：AskTree 完整交互画布（虚线连线、缩放/平移、折叠、
  *    拖拽、点选编辑、＋加子问题、重新回答、三种布局、Markdown 渲染）
- *  - conversation.session.header.actions：会话头「树」开关按钮
+ *  - conversation.session.header.actions：会话头「Asktree」开关按钮（按会话隔离）
  *  - 与 Host 树仓双向同步：host.call("asktree.getTree" / "asktree.mutate")
  *
  * 说明：Client 环境无 document/window 全局，全部 UI 用 React.createElement 构建。
@@ -18,18 +18,19 @@ return {
 
     /* ================= 共享 UI 状态（插件生命周期内存） ================= */
     const ui = {
+      sessionId: null,          // 当前会话 id（由会话头按钮捕获）
       open: false,
-      snapshot: null,          // { tree, title, via, notice }
-      layout: "h",             // h | v | free
+      snapshot: null,           // { tree, title, via, notice }
+      layout: "h",              // h | v | free
       zoom: 1,
       selectedId: null,
-      positions: {},           // id -> {x,y}（自由拖拽）
-      collapsed: {},           // id -> bool
-      ansShown: {},            // id -> bool（块内显示回答）
-      loading: {},             // id -> bool（回答生成中）
-      busy: false,             // 全局处理中
-      autoAnswer: true,        // 添加子问题后自动回答
-      addBoxFor: null,         // 正在输入子问题的节点
+      positions: {},            // id -> {x,y}（自由拖拽）
+      collapsed: {},            // id -> bool
+      ansShown: {},             // id -> bool（块内显示回答）
+      loading: {},              // id -> bool（回答生成中）
+      busy: false,              // 全局处理中
+      autoAnswer: true,         // 添加子问题后自动回答
+      addBoxFor: null,          // 正在输入子问题的节点
       msg: null
     };
     let version = 0;
@@ -53,12 +54,12 @@ return {
       }
     }
 
-    /* ================= Host RPC ================= */
+    /* ================= Host RPC（按会话） ================= */
     async function getTree() {
-      try { return await host.call("asktree.getTree"); } catch (e) { console.error(e); return null; }
+      try { return await host.call("asktree.getTree", { sessionId: ui.sessionId || null }); } catch (e) { console.error(e); return null; }
     }
     async function mutate(args) {
-      try { return await host.call("asktree.mutate", args); } catch (e) {
+      try { return await host.call("asktree.mutate", { ...args, sessionId: ui.sessionId || null }); } catch (e) {
         return { ok: false, reason: e && e.message ? String(e.message) : String(e) };
       }
     }
@@ -305,14 +306,20 @@ return {
       if (!ui.open) return null;
       return h(Panel, {});
     }
-    function HeaderAction() {
+    function HeaderAction(props) {
       useVersion();
+      React.useEffect(() => {
+        if (props && props.sessionId && props.sessionId !== ui.sessionId) {
+          ui.sessionId = props.sessionId;
+          refresh();
+        }
+      }, [props && props.sessionId]);
       const count = ui.snapshot && ui.snapshot.tree ? Object.keys(ui.snapshot.tree.nodes).length : 0;
       return h("button", {
         className: "at-toggle" + (ui.open ? " at-on" : ""),
-        title: "问答树画布" + (count ? "（" + count + " 个节点）" : ""),
+        title: "Asktree 问答树画布" + (count ? "（" + count + " 个节点）" : ""),
         onClick: () => { ui.open = !ui.open; if (ui.open) refresh(); bump(); }
-      }, "树" + (count ? " " + count : ""));
+      }, "Asktree");
     }
     function Panel() {
       useVersion();
@@ -329,7 +336,7 @@ return {
       const count = tree ? Object.keys(tree.nodes).length : 0;
       return h("div", { className: "at-panel" },
         h("div", { className: "at-head" },
-          h("span", { className: "at-title" }, "树 · " + title),
+          h("span", { className: "at-title" }, "Asktree · " + title),
           via && h("span", { className: "at-badge via" }, via),
           h("span", { className: "at-count" }, count + " 节点"),
           ui.busy && h("span", { className: "at-spinner-wrap" }, h("span", { className: "at-spinner" }), " 处理中…"),
@@ -636,7 +643,7 @@ return {
     ));
     slots.inject("conversation.session.header.actions", () => slots.register(
       { name: "conversation.session.header.actions", id: "asktree-toggle", order: 15 },
-      () => h(HeaderAction, {})
+      (props) => h(HeaderAction, props)
     ));
   }
 };

@@ -1,5 +1,7 @@
 # AskTree × DeepSeek Harness 动态插件
 
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0.0-blue)](https://polyformproject.org/licenses/noncommercial/1.0.0)
+
 把「树形问答」搬进 DeepSeek Harness（DSH）：**5 个模型工具** + **GUI 交互画布**，数据双向打通。
 
 - 本仓库为**原创项目**：作者先创作了单文件树形问答网页 AskTree，再在其上为 DeepSeek Harness 做 DSH 插件适配。许可见 [LICENSE](./LICENSE)（PolyForm Noncommercial 1.0.0，**禁止商用**）。
@@ -19,9 +21,10 @@
 
 ### GUI 画布（Client）
 
-- 会话头「**树 N**」按钮 → `shell.overlay` 浮层
+- 会话头「**Asktree**」按钮 → `shell.overlay` 浮层
 - AskTree 完整交互：**虚线连线、水平/垂直/自由三种布局、Ctrl+滚轮缩放、平移、双击复位、适配、折叠、拖拽、点选编辑（问题/回答 + Markdown 预览）、＋加子问题（自动回答）、⟳ 重新回答、删除子树**
-- 与 Host 树仓双向同步：导入/解析/推送的树自动进画布（打开时 1.5s 轮询或手动 ⟳）；画布编辑写回宿主，与工具共享同一棵树
+- **按当前对话隔离**：每个会话一棵树——在 Asktree 里与 AI 交互、关闭重开保持同一棵树；新建对话从空开始；切换对话各自独立（跨会话关联语义为未来计划）
+- 与 Host 树仓双向同步：导入/解析/推送的树自动进当前会话的画布（打开时 1.5s 轮询或手动 ⟳）；画布编辑写回宿主，与工具共享同一棵树
 
 ## 快速上手（在 DSH 会话中）
 
