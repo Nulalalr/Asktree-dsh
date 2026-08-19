@@ -2,7 +2,7 @@
 
 把「树形问答」搬进 DeepSeek Harness（DSH）：**5 个模型工具** + **GUI 交互画布**，数据双向打通。
 
-- 本仓库为**原创项目**：作者先创作了单文件树形问答网页 AskTree，再在其上为 DeepSeek Harness 做 DSH 插件适配。许可见 [LICENSE](./LICENSE)（MIT）。
+- 本仓库为**原创项目**：作者先创作了单文件树形问答网页 AskTree，再在其上为 DeepSeek Harness 做 DSH 插件适配。许可见 [LICENSE](./LICENSE)（PolyForm Noncommercial 1.0.0，**禁止商用**）。
 - 实现为 DSH 的**动态 Cordis 插件**（进程内运行，非 npm 包；如需可安装的插件包形态，见文末「升级为可安装插件包」）。
 
 ## 功能一览
@@ -67,4 +67,10 @@ asktree-dsh-plugin/
 
 ## 许可
 
-本项目为**作者原创**，采用 [MIT](./LICENSE) 许可。Copyright (c) 2026 CatRL。
+本项目为**作者原创**，采用 [PolyForm Noncommercial License 1.0.0](./LICENSE)：
+
+- **允许**：非商业使用——个人研究、学习、实验、教学、公益组织与教育机构等（详见协议 Personal Uses / Noncommercial Organizations 条款）
+- **禁止**：一切**商用**（以盈利为目的的使用或活动）；商用需另行获得作者书面授权
+- 附赠版权与专利授权，但**不提供任何担保与责任**（No Liability）
+
+> 提醒：非商业许可是「许可限制」而非「防盗」。代码公开可下载，协议提供的是他人违反时你追究责任的法律依据。
