@@ -55,9 +55,10 @@
 ## 结构
 
 ```
-asktree-dsh-plugin/
-├── host.js      # code.host：工具 + 树仓 + getTree/mutate RPC
-├── client.js    # code.client：画布浮层 + 会话头开关
+Asktree-dsh/
+├── host.js      # code.host：5 工具 + 按会话隔离的树仓 + getTree/mutate RPC
+├── client.js    # code.client：画布浮层 + 会话头 Asktree 开关
+├── LICENSE      # PolyForm Noncommercial 1.0.0（禁止商用）
 └── README.md
 ```
 
