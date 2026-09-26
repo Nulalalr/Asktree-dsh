@@ -306,20 +306,38 @@ return {
       if (!ui.open) return null;
       return h(Panel, {});
     }
-    function HeaderAction(props) {
-      useVersion();
+    function useSyncSession(props) {
       React.useEffect(() => {
         if (props && props.sessionId && props.sessionId !== ui.sessionId) {
           ui.sessionId = props.sessionId;
           refresh();
         }
       }, [props && props.sessionId]);
+    }
+    function toggleButton(compact) {
       const count = ui.snapshot && ui.snapshot.tree ? Object.keys(ui.snapshot.tree.nodes).length : 0;
       return h("button", {
-        className: "at-toggle" + (ui.open ? " at-on" : ""),
+        className: "at-toggle" + (compact ? " at-compact" : "") + (ui.open ? " at-on" : ""),
         title: "Asktree 问答树画布" + (count ? "（" + count + " 个节点）" : ""),
         onClick: () => { ui.open = !ui.open; if (ui.open) refresh(); bump(); }
       }, "Asktree");
+    }
+    function HeaderAction(props) {
+      useVersion();
+      useSyncSession(props);
+      return toggleButton(false);
+    }
+    function ComposerAction(props) {
+      useVersion();
+      useSyncSession(props);
+      // 全新对话（空白会话）会把会话标题栏整体 display:none，标题栏按钮看不见，
+      // 因此再在输入框工具行放一个入口；只在「确定是非空白会话」时隐藏它，避免重复。
+      const useSession = props && props.useSession;
+      const blankSel = typeof useSession === "function"
+        ? useSession(s => (s === undefined ? undefined : s.blank === true))
+        : true;
+      if (blankSel === false) return null;
+      return toggleButton(true);
     }
     function Panel() {
       useVersion();
@@ -561,6 +579,7 @@ return {
 .at-toggle{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:12.5px;color:#a8b0c0;background:transparent;border:1px solid transparent;cursor:pointer;white-space:nowrap}
 .at-toggle:hover{background:#222735;color:#e8ebf2}
 .at-toggle.at-on{background:#1e4d86;color:#cfe3fb;border-color:#2f6cb3}
+.at-toggle.at-compact{padding:2px 8px;font-size:12px}
 .at-panel{position:fixed;top:56px;left:16px;right:16px;bottom:16px;max-width:1180px;margin:0 auto;display:flex;flex-direction:column;background:#15181f;border:1px solid #2a3040;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:1000;overflow:hidden;pointer-events:auto;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;font-size:13px;color:#e8ebf2}
 .at-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a3040;background:#1b1f28;flex-wrap:wrap}
 .at-title{font-size:13.5px;font-weight:600;color:#e8ebf2}
@@ -644,6 +663,10 @@ return {
     slots.inject("conversation.session.header.actions", () => slots.register(
       { name: "conversation.session.header.actions", id: "asktree-toggle", order: 15 },
       (props) => h(HeaderAction, props)
+    ));
+    slots.inject("conversation.input.left", () => slots.register(
+      { name: "conversation.input.left", id: "asktree-toggle-input", order: 5 },
+      (props) => h(ComposerAction, props)
     ));
   }
 };
