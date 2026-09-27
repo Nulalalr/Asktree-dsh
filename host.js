@@ -63,11 +63,6 @@ return {
       n.answer = r.text;
       return r;
     }
-    const DEMO_TREE = { nodes: {
-      n1: { id: "n1", text: "深度学习在量化投资中到底能用在哪些环节？", answer: "主要四类：1）信号生成与因子挖掘；2）组合构建；3）执行与成本建模；4）另类数据理解。落地最成熟的是信号/因子这一环。", parentId: null, children: ["n2", "n3"] },
-      n2: { id: "n2", text: "用深度学习做因子挖掘，输入特征一般怎么构造？", answer: "时序特征、截面特征、基本面/另类三线；注意时间对齐与标签泄漏两个坑。", parentId: "n1", children: [] },
-      n3: { id: "n3", text: "这类模型实盘最大的坑是什么？", answer: "未来函数、过拟合、高换手被成本吃掉、因子拥挤与衰减。", parentId: "n1", children: [] }
-    }, rootId: "n1" };
 
     /* ---- 分享消息 → 问答树（AskTree buildTreeFromMessages 移植）---- */
     function buildTreeFromMessages(messages) {
@@ -499,16 +494,12 @@ return {
     ctx.effect(() => harness.handle("asktree.mutate", async (args) => {
       const st = storeFor(args && args.sessionId);
       const op = args && args.op;
-      if (op === "demo") {
-        st.tree = JSON.parse(JSON.stringify(DEMO_TREE)); st.title = "示例：深度学习×量化投资"; st.via = "demo"; st.notice = null;
-        return snapshot(st);
-      }
       if (op === "load") {
         if (!args.tree || !args.tree.nodes || !args.tree.rootId) throw new Error("load 需要合法的 tree { nodes, rootId }");
         st.tree = args.tree; st.title = args.title || st.title; st.via = args.via || "json"; st.notice = null;
         return snapshot(st);
       }
-      if (!st.tree) throw new Error("尚未导入任何树：先让模型运行 asktree_import_share / asktree_parse_chat，或点「载入示例树」");
+      if (!st.tree) throw new Error("尚未导入任何树：先让模型运行 asktree_import_share / asktree_parse_chat / asktree_show");
       switch (op) {
         case "addChild": {
           const parentId = String(args.parentId);

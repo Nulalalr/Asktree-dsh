@@ -291,14 +291,6 @@ return {
       else applySnapshot(res);
       bump();
     }
-    async function loadDemo() {
-      ui.busy = true; bump();
-      const res = await mutate({ op: "demo" });
-      ui.busy = false;
-      if (res && res.ok === false) setMsg(res.reason || "载入失败");
-      else applySnapshot(res);
-      bump();
-    }
 
     /* ================= 组件 ================= */
     function OverlayEntry() {
@@ -369,8 +361,7 @@ return {
         ),
         ui.msg && h("div", { className: "at-msg" }, ui.msg),
         tree ? h(TreeBody, { tree }) : h("div", { className: "at-empty" },
-          h("p", null, "还没有问答树。让模型运行 asktree_import_share / asktree_parse_chat / asktree_show，或先载入一棵示例树。"),
-          h("button", { className: "at-go", onClick: loadDemo }, "载入示例树")
+          h("p", null, "还没有问答树。在对话里让模型运行 asktree_import_share / asktree_parse_chat / asktree_show 即可生成。")
         )
       );
     }
