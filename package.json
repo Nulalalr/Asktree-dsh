@@ -1,0 +1,38 @@
+{
+  "name": "asktree-dsh",
+  "version": "1.0.0",
+  "description": "AskTree 树形问答 · DeepSeek Harness 插件（5 个模型工具 + GUI 交互画布，按会话隔离）",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-tool"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.2"
+  }
+}

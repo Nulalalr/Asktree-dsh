@@ -64,10 +64,7 @@ Asktree-dsh/
 
 ## 升级为可安装插件包
 
-如需让任何 DSH 部署可安装（npm 包 + 宿主 `cordis.yml` 挂一行），可在此基础上封装：
-- `package.json`（`main` 导出含 `apply(ctx)` 的 Cordis 插件，把 host.js 内容包成模块）
-- Client 侧按 DSH web 插件表（`dsh.client` 扫描 + 组合）接入
-- 在部署的 host 组合 `cordis.yml` 增加该插件行（参考 `@deepseek-ai/dsh-tool-web` 的挂载方式）
+详见 [`INSTALL.md`](./INSTALL.md)：动态插件（本仓库现状）→ 可安装插件（npm 包 + 宿主组合挂载）的完整改造步骤、真实 API 对照、以及 TypeScript/Typert 构建要求。仓库根已有 [`package.json`](./package.json) 骨架。
 
 ## 许可
 
