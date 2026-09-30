@@ -56,15 +56,31 @@
 
 ```
 Asktree-dsh/
-├── host.js      # code.host：5 工具 + 按会话隔离的树仓 + getTree/mutate RPC
-├── client.js    # code.client：画布浮层 + 会话头 Asktree 开关
-├── LICENSE      # PolyForm Noncommercial 1.0.0（禁止商用）
-└── README.md
+├── src/                 TypeScript 可安装插件（见 INSTALL.md）
+│   ├── index.ts         宿主入口：5 工具 + 树仓 + 画布 RPC 频道
+│   ├── client.ts        客户端入口：画布浮层 + 会话头/输入框开关（含深/浅主题）
+│   ├── tools.ts / store.ts / llm.ts / share.ts
+│   ├── remote-host.ts / remote-client.ts   画布桥（connection.rpc 频道）
+│   └── tree.ts / parse.ts / markdown.ts / layout.ts / css.ts / bridge.ts / types.ts
+├── scripts/build-client.mjs   生成 DSH 要求的 __ModuleLoader__ 客户端 bundle
+├── host.js              动态插件版 code.host（贴进 cordis_define 即用）
+├── client.js            动态插件版 code.client
+├── package.json         插件包元数据（main / exports / dsh.client）
+├── tsconfig.json        构建配置
+├── INSTALL.md           构建与安装说明
+└── LICENSE              PolyForm Noncommercial 1.0.0（禁止商用）
 ```
 
-## 升级为可安装插件包
+## 两种形态
 
-详见 [`INSTALL.md`](./INSTALL.md)：动态插件（本仓库现状）→ 可安装插件（npm 包 + 宿主组合挂载）的完整改造步骤、真实 API 对照、以及 TypeScript/Typert 构建要求。仓库根已有 [`package.json`](./package.json) 骨架。
+- **动态插件**（`host.js` / `client.js`）：贴进 DSH 会话的 `cordis_define` 即用，适合试用；进程重启后需重新定义并授权。
+- **可安装插件**（`src/` → `lib/`）：npm 包形态，挂进宿主组合，重启不丢、免逐次授权。
+  构建与安装见 [`INSTALL.md`](./INSTALL.md)：
+  ```bash
+  npm install && npm run typecheck && npm run build   # tsc + esbuild → lib/
+  dsh plugin --profile desktop add <本仓库>            # 装进 profile
+  # 再在 profile 的 cordis.patch.yml 加一行：- id: asktree / name: "asktree-dsh"
+  ```
 
 ## 许可
 
