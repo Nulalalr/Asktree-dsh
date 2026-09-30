@@ -31,6 +31,7 @@ return {
       busy: false,              // 全局处理中
       autoAnswer: true,         // 添加子问题后自动回答
       addBoxFor: null,          // 正在输入子问题的节点
+      theme: "dark",            // dark | light（画布配色）
       msg: null
     };
     let version = 0;
@@ -344,7 +345,7 @@ return {
       const title = (ui.snapshot && ui.snapshot.title) || "问答树";
       const via = ui.snapshot ? ui.snapshot.via : null;
       const count = tree ? Object.keys(tree.nodes).length : 0;
-      return h("div", { className: "at-panel" },
+      return h("div", { className: "at-panel" + (ui.theme === "light" ? " at-light" : "") },
         h("div", { className: "at-head" },
           h("span", { className: "at-title" }, "Asktree · " + title),
           via && h("span", { className: "at-badge via" }, via),
@@ -356,6 +357,7 @@ return {
           h("button", { className: "at-hbtn" + (ui.layout === "v" ? " at-on" : ""), onClick: () => setLayout("v") }, "垂直"),
           h("button", { className: "at-hbtn" + (ui.layout === "free" ? " at-on" : ""), onClick: () => setLayout("free") }, "自由"),
           h("button", { className: "at-hbtn" + (ui.autoAnswer ? " at-on" : ""), title: "添加子问题后是否自动回答", onClick: () => { ui.autoAnswer = !ui.autoAnswer; bump(); } }, ui.autoAnswer ? "自动回答" : "手动回答"),
+          h("button", { className: "at-hbtn", title: "切换深色/浅色", onClick: () => { ui.theme = ui.theme === "light" ? "dark" : "light"; bump(); } }, ui.theme === "light" ? "☀️ 浅色" : "🌙 深色"),
           h("button", { className: "at-hbtn", onClick: fitView }, "适配"),
           h("button", { className: "at-hbtn at-close", title: "关闭", onClick: () => { ui.open = false; bump(); } }, "✕")
         ),
@@ -642,6 +644,39 @@ return {
 .at-md strong{color:#e8ebf2}
 .at-spinner{width:12px;height:12px;border-radius:50%;border:2px solid #2a3040;border-top-color:#4d8fe0;display:inline-block;animation:at-spin .8s linear infinite}
 @keyframes at-spin{to{transform:rotate(360deg)}}
+.at-panel.at-light{background:#eef1f6;border-color:#d6dce6;color:#1b2230}
+.at-panel.at-light .at-head{background:#ffffff;border-color:#d6dce6}
+.at-panel.at-light .at-title{color:#1b2230}
+.at-panel.at-light .at-count,.at-panel.at-light .at-spinner-wrap{color:#8b94a7}
+.at-panel.at-light .at-hbtn{color:#495264}
+.at-panel.at-light .at-hbtn:hover{background:#e8ecf3;color:#1b2230}
+.at-panel.at-light .at-body{background-color:#eef1f6;background-image:linear-gradient(rgba(15,23,42,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(15,23,42,.07) 1px,transparent 1px)}
+.at-panel.at-light .at-block{background:#ffffff;border-color:#c3ccda;box-shadow:0 2px 10px rgba(15,23,42,.10)}
+.at-panel.at-light .at-block:hover{border-color:#9cc2ec}
+.at-panel.at-light .at-block.at-selected{border-color:#2f6cb3;box-shadow:0 0 0 1.5px #2f6cb3,0 4px 18px rgba(47,108,179,.20)}
+.at-panel.at-light .at-q{background:#e9f1fc;border-color:#9cc2ec;color:#14528f}
+.at-panel.at-light .at-link{stroke:rgba(15,23,42,.40)}
+.at-panel.at-light .at-meta{color:#8b94a7}
+.at-panel.at-light .at-meta:hover{color:#495264;background:#e8ecf3}
+.at-panel.at-light .at-cbtn{color:#495264;border-color:#c3ccda}
+.at-panel.at-light .at-cbtn:hover{background:#e8ecf3;color:#1b2230}
+.at-panel.at-light .at-msg{background:#e8ecf3;border-color:#c3ccda;color:#1b2230}
+.at-panel.at-light .at-empty{color:#495264}
+.at-panel.at-light .at-inspector{background:#ffffff;border-color:#d6dce6}
+.at-panel.at-light .at-ta{background:#ffffff;border-color:#d6dce6;color:#1b2230}
+.at-panel.at-light .at-preview{background:#ffffff;border-color:#d6dce6}
+.at-panel.at-light .at-md{color:#1b2230}
+.at-panel.at-light .at-md .at-icode,.at-panel.at-light .at-md .at-code,.at-panel.at-light .at-md .at-quote{background:#e8ecf3;border-color:#d6dce6;color:#495264}
+.at-panel.at-light .at-md strong{color:#1b2230}
+.at-panel.at-light .at-addbox{background:#ffffff;border-color:#9cc2ec}
+.at-panel.at-light .at-chev{color:#8b94a7}
+.at-panel.at-light .at-chev:hover{color:#1b2230;background:#e8ecf3}
+.at-panel.at-light .at-grip{color:#8b94a7}
+.at-panel.at-light .at-add{background:#e8ecf3;border-color:#2f9e6b;color:#2f9e6b}
+.at-panel.at-light .at-add:hover{background:#e4f5ec;color:#1d7d52}
+.at-panel.at-light .at-badge{background:#e9f1fc;border-color:#9cc2ec;color:#14528f}
+.at-panel.at-light .at-badge.via{background:#e4f5ec;border-color:#2f9e6b;color:#2f9e6b}
+.at-panel.at-light .at-spinner{border-color:#d6dce6;border-top-color:#2f6cb3}
 `;
     styles.insert(css);
 
